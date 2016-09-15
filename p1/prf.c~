@@ -15,7 +15,7 @@ static int prf_initialized;
 /* NOTE: for those that don't know, static variables in C will be
  * initialized to 0.  This is important for us. */
 #define VERY_YES 9191919
-
+//comment
 int setSeed(unsigned char* entropy, size_t len)
 {
 	if (prf_initialized != VERY_YES) mpz_init(rcount);
