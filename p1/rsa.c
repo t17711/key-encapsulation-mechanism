@@ -15,7 +15,7 @@
 
 /* utility function for read/write mpz_t with streams: */
 int zToFile(FILE* f, mpz_t x)
-{
+{ 
 	size_t i,len = mpz_size(x)*sizeof(mp_limb_t);
 	unsigned char* buf = malloc(len);
 	/* force little endian-ness: */
@@ -42,7 +42,7 @@ int zFromFile(FILE* f, mpz_t x)
 	}
 	unsigned char* buf = malloc(len);
 	fread(buf,1,len,f);
-	BYTES2Z(x,buf,len);
+	BYTES2(x,buf,len);
 	/* kill copy in buffer, in case this was sensitive: */
 	memset(buf,0,len);
 	free(buf);
@@ -56,6 +56,34 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K)
 	 * the right length, and then test for primality (see the ISPRIME
 	 * macro above).  Once you've found the primes, set up the other
 	 * pieces of the key ({en,de}crypting exponents, and n=pq). */
+
+	mp_limb_t *get_rand_string; // prf randBytes needs this
+	int prime_or_not = 0;
+
+
+	// set the value for K->p
+
+	get_rand_string = mpz_limbs_write(K->p, keyBits); // pointer to value of k->p
+	while (true){
+	  randBytes(get_rand_string, keyBits); // generates random byte string
+	  prime_or_not =ISPRIME(K->p); // sheck prime
+	  
+	  if (prime_or_not ==2 || prime_or_not ==1) { // if 2 prime if 1 probably or the other way around, but good enough for us
+	    mpz_limbs_finish(K->p, keyBits); // allocate the value permanently
+	    break;
+	  }
+
+	 // set the random value for K->q
+	get_rand_string = mpz_limbs_write(K->q, keyBits); // pointer to value of k->p
+	  while (true){
+	  randBytes(get_rand_string, keyBits); // generates random byte string
+	  prime_or_not =ISPRIME(K->p); // sheck prime
+	  
+	  if (prime_or_not ==2 || prime_or_not ==1) { // if 2 prime if 1 probably or the other way around, but good enough for us
+	    mpz_limbs_finish(K->q, keyBits); // allocate the value permanently
+	    break;
+	  }
+	}
 	return 0;
 }
 
