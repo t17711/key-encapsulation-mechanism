@@ -9,7 +9,7 @@
 #include "../prf.h"
 
 /* turn this on to print more stuff. */
-#define VDEBUG 0
+#define VDEBUG 1
 /* turn this on for randomized tests. */
 #define RANDKEY 0
 
@@ -33,6 +33,7 @@ int main() {
 #endif
 	RSA_KEY K;
 	rsa_keyGen(1024,&K);
+	//gmp_printf("key gen happened p = %Zd, q = %Zd , n = %Zd, e =%Zd, d = %Zd",K.p,K.q,K.n, K.e,K.d);
 	size_t i,j,ctLen,mLen = rsa_numBytesN(&K);
 	unsigned char* pt = malloc(mLen);
 	unsigned char* ct = malloc(mLen);

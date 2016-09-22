@@ -52,22 +52,46 @@ int zFromFile(FILE* f, mpz_t x)
 int rsa_keyGen(size_t keyBits, RSA_KEY* K)
 {
   rsa_initKey(K);
+  
   /* TODO: write this.  Use the prf to get random byte strings of
    * the right length, and then test for primality (see the ISPRIME
    * macro above).  Once you've found the primes, set up the other
    * pieces of the key ({en,de}crypting exponents, and n=pq). */
+  // keyBits = keyBits*sizeof(mp_limb_t);
 
-  unsigned char* buf = malloc(keyBits);  // prf randBytes needs this
+  
+ /* unsigned ka = 29; */
+ /*  mpz_set_ui(K->p, ka); */
+
+ /*  ka = 29; */
+ /*  mpz_set_ui(K->q, ka);  */
+
+ /*  ka =551; */
+ /*  mpz_set_ui(K->n, ka); */
+
+ /*  ka = 421; */
+ /*  mpz_set_ui(K->e, ka); */
+
+ /*  ka= 85; */
+ /*  mpz_set_ui(K->d, ka); */
+ 
+ /*  return ka; */
+  
+  keyBits*=sizeof(mp_limb_t);
+  unsigned char* buf  = malloc(keyBits);  // prf randBytes needs this
   int prime_or_not = 0;
 
   // set the value for K->p
-
+  gmp_printf("start keygen \n");
   while (1){
     randBytes(buf, keyBits); // generates random byte string 
-   
+    
+    BYTES2Z(K->p,buf,keyBits);
+    
     prime_or_not =ISPRIME(K->p); // sheck prime
 	  
     if (prime_or_not ==2 || prime_or_not ==1) { // if 2 prime if 1 probably or the other way around, but good enough for us
+      printf("prime found for p\n");
       break;
     }
   }
@@ -77,45 +101,55 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K)
   while (1){
     randBytes(buf, keyBits); // generates random byte string 
     BYTES2Z(K->q,buf,keyBits); // copy bits to mpz variable
+  
     prime_or_not =ISPRIME(K->q); // sheck prime
-	  
+ 
     if (prime_or_not ==2 || prime_or_not ==1) { // if 2 prime if 1 probably or the other way around, but good enough for us
+      printf("prime found for q\n");
       break;
     }
   }
 
   
   mpz_mul(K->n, K->p,K->q); // n = p*q
+  gmp_printf("n found%Zd\n ",K->n);
 
   // find e
 
   // use d for temporarily store phi
   // phi(n) = (p-1)(q - 1) == pq -p -q + 1
   mpz_mul(K->d, K->p, K->q); // pq
-  mpz_sub(K->d, K->e, K->p); // pq -p
-  mpz_sub(K->d, K->e, K->q); // pq-p-q
-  mpz_add_ui(K->d, K->e,(unsigned int)(1));//pq-p-q+1
+  mpz_sub(K->d, K->d, K->p); // pq -p
+  mpz_sub(K->d, K->d, K->q); // pq-p-q
+  mpz_add_ui(K->d, K->d,(unsigned int)(1));//pq-p-q+1
  
   // fine e now , s.t. gcd(en phi) = 1
 
   unsigned int k = 65537; // let k be 6537 1st , as it seems to be recommended # online
-  
+  // currently i have K->d as phi after i find real e i set K->e to that and calculate d to det to K->d
   while(1){
-    mpz_set_ui(K->e,k);
-    if (mpz_gcd_ui(0,K->e,k) == (unsigned long)(1)) break; // if e found return
+    if (mpz_gcd_ui(0,K->d,k) == (unsigned long)(1)){
+  
+     mpz_set_ui(K->e, k); // set e as 
+     gmp_printf("Encryption key e found %Zd\n", K->e);
+     break; // if e found return
+    }
     k+=2 ; // keep k odd since primes are odd, p-1 * q-1 is even so e must be odd
   }
-  
-  // now find d = (k * phi + 1) / e
-  k = 2;
 
+
+  // now find d = (k * phi + 1) / e
+  k = 1000;
+  // k->d is phi right now
   mpz_mul_ui(K->d,K->d, k);
   k =1;
   mpz_add_ui(K->d,K->d, k);
   mpz_div(K->d,K->d, K->e);
 
+  gmp_printf("d found  %Zd\n",K->d);
   free(buf);// chear memory
   // p q n d done;
+  
 
   return 0;
 }
@@ -126,14 +160,31 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 {
   /* TODO: write this.  Use BYTES2Z to get integers, and then
    * Z2BYTES to write the output buffer. */
-    
-  return 0; /* TODO: return should be # bytes written */
+  printf("Start encrypt\n");
+ 
+  NEWZ(x);// to hold date
+  BYTES2Z(x,inBuf,len);
+  mpz_powm(x,x,K->e,K->n); // x =x^e mod n
+
+  len = mpz_size(x)*sizeof(mp_limb_t);
+  Z2BYTES(outBuf, len,x);
+  mpz_clear(x);    
+  return len; /* TODO: return should be # bytes written */
 }
 size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		   RSA_KEY* K)
 {
   /* TODO: write this.  See remarks above. */
-  return 0;
+  printf("Start decrypt\n");
+  NEWZ(m);// to hold date
+  BYTES2Z(m,inBuf,len);
+  
+  mpz_powm(m,m,K->d,K->n); // m =m^d mod n
+    len = mpz_size(m)*sizeof(mp_limb_t);
+  Z2BYTES(outBuf, len,m);
+  mpz_clear(m);    
+  return len; /* TODO: return should be # bytes written */
+  
 }
 
 size_t rsa_numBytesN(RSA_KEY* K)
