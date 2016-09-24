@@ -11,11 +11,10 @@
 /* turn this on to print more stuff. */
 #define VDEBUG 1
 /* turn this on for randomized tests. */
-#define RANDKEY 0
+#define RANDKEY 1
 
 /* encrypt / decrypt some strings, and make sure
  * this composition is the identity */
-
 int main() {
 	fprintf(stderr, "testing rsa...\n");
 	char *pass,*fail;
@@ -42,7 +41,8 @@ int main() {
 		pt[mLen-1] = 0; /* avoid reduction mod n. */
 		randBytes(pt,mLen-1);
 		/* encrypt, decrypt, check. */
-		ctLen = rsa_encrypt(ct,pt,mLen,&K);
+		ctLen = rsa_encrypt(ct,pt,mLen-1,&K);
+
 		rsa_decrypt(dt,ct,ctLen,&K);
 		for (j = 0; j < mLen; j++) {
 			if (dt[j] != pt[j]) break;
