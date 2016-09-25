@@ -107,6 +107,8 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K)
   // dont need p q anymore
   mpz_mul(K->d,K->p,K->q);
 
+  mpz_add_ui(K->q,K->q,1);
+  mpz_add_ui(K->p,K->p,1);
   // fine e now , s.t. gcd(en phi) = 1
 
   unsigned int k =6537; // let k be 6537 1st , as it seems to be recommended # online
@@ -121,8 +123,8 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K)
     k+=2 ; // keep k odd since primes are odd, p-1 * q-1 is even so e must be odd
   }
 
-  // now find d s.t. d*e mod n ==1,
-  mpz_invert(K->d, K->e,K->n);
+  // now find d s.t. d*e mod phi ==1,here K-> d is initially phi
+  mpz_invert(K->d, K->e,K->d);
 
   // gmp_printf("d found  %Zd\n",K->d);
   free(buf);// chear memory
@@ -145,7 +147,7 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
   BYTES2Z(m,inBuf,len);
 
   //gmp_printf("to encrypt : %Zd\n", x);
-  mpz_powm_sec(c,m,K->e,K->n); // x =x^e mod n
+  mpz_powm_sec(c,m,K->e,K->n); // c =m^e mod n
 
   //mpz_mul(x, x, K->n);
 
@@ -164,7 +166,7 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
   /* TODO: write this.  See remarks above. */
 
   //printf("Start decrypt\n");
-  NEWZ(c);// to hold date
+  NEWZ(c);// to hold data
   NEWZ(m);
 
  // printf("In buff size  %d\n",(int)len);
@@ -172,7 +174,7 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 
   //gmp_printf("to decrypt : %Zd\n", m);
   
-  mpz_powm_sec(m,c,K->d,K->n); // m =m^d mod n
+  mpz_powm_sec(m,c,K->d,K->n); // m =c^d mod n
 
   //mpz_div(m, m, K->n);
   size_t len2;//= mpz_size(m)*sizeof(mp_limb_t);
@@ -180,7 +182,7 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
   //gmp_printf("decrypted %Zd\n",m);
   Z2BYTES(outBuf,len2,m);
 
-  len2 = mpz_size(m)*sizeof(mp_limb_t);
+  //len2 = mpz_size(m)*sizeof(mp_limb_t);
 //  mpz_clear(m);
 
    //printf("out length %d\n",(int)strlen(outBuf));
