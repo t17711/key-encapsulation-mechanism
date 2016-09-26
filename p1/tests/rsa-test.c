@@ -9,13 +9,12 @@
 #include "../prf.h"
 
 /* turn this on to print more stuff. */
-#define VDEBUG 0
+#define VDEBUG 1
 /* turn this on for randomized tests. */
-#define RANDKEY 0
+#define RANDKEY 1
 
 /* encrypt / decrypt some strings, and make sure
  * this composition is the identity */
-
 int main() {
 	fprintf(stderr, "testing rsa...\n");
 	char *pass,*fail;
@@ -33,6 +32,7 @@ int main() {
 #endif
 	RSA_KEY K;
 	rsa_keyGen(1024,&K);
+	//gmp_printf("key gen happened p = %Zd, q = %Zd , n = %Zd, e =%Zd, d = %Zd",K.p,K.q,K.n, K.e,K.d);
 	size_t i,j,ctLen,mLen = rsa_numBytesN(&K);
 	unsigned char* pt = malloc(mLen);
 	unsigned char* ct = malloc(mLen);
@@ -41,10 +41,14 @@ int main() {
 		pt[mLen-1] = 0; /* avoid reduction mod n. */
 		randBytes(pt,mLen-1);
 		/* encrypt, decrypt, check. */
-		ctLen = rsa_encrypt(ct,pt,mLen,&K);
+		ctLen = rsa_encrypt(ct,pt,mLen-1,&K);
+
 		rsa_decrypt(dt,ct,ctLen,&K);
+
 		for (j = 0; j < mLen; j++) {
-			if (dt[j] != pt[j]) break;
+			//printf("%d %u   %u\n",j, dt[j],pt[j]);
+			if (dt[j] != pt[j])
+				break;
 		}
 		fprintf(stderr, "test[%02lu] %s\n",i,(j==mLen)?pass:fail);
 	}
