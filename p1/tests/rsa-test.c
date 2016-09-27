@@ -44,7 +44,7 @@ int main() {
 		ctLen = rsa_encrypt(ct,pt,mLen-1,&K);
 
 		rsa_decrypt(dt,ct,ctLen,&K);
-
+		//dt[mLen-1]=0;
 		for (j = 0; j < mLen; j++) {
 			//printf("%d %u   %u\n",j, dt[j],pt[j]);
 			if (dt[j] != pt[j])
