@@ -55,10 +55,9 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 	 * the right length, and then test for primality (see the ISPRIME
 	 * macro above).  Once you've found the primes, set up the other
 	 * pieces of the key ({en,de}crypting exponents, and n=pq). */
-
-	//keyBits/=(CHAR_BIT);//byte from bits
+	keyBits /= CHAR_BIT;  // need bytes instead of bit
 	unsigned char* buf = malloc(keyBits);  // prf randBytes needs this
-	// buf[keyBits-1]= 0;
+
 	int prime_or_not = 0;
 
 	// set the value for K->p
@@ -67,15 +66,13 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 		randBytes(buf, keyBits); // generates random byte string
 
 		BYTES2Z(K->p, buf, keyBits);
-		mpz_nextprime(K->p, K->p);
+		//mpz_nextprime(K->p, K->p);
 		prime_or_not = ISPRIME(K->p); // sheck prime
 
-		if (prime_or_not != 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
-			// mpz_nextprime(K->p,K->p);
+		if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
 			printf("prime found for p\n");
 			break;
 		}
-		//mpz_clear(K->p);
 	}
 
 	// set the random value for K->q
@@ -83,11 +80,9 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 	while (1) {
 		randBytes(buf, keyBits); // generates random byte string
 		BYTES2Z(K->q, buf, keyBits); // copy bits to mpz variable
-		mpz_nextprime(K->q, K->q);
+		//	mpz_nextprime(K->q, K->q);
 		prime_or_not = ISPRIME(K->q); // sheck prime
-
-		if (prime_or_not != 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
-			//  mpz_nextprime(K->q,K->q);
+		if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
 			printf("prime found for q\n");
 			break;
 		}
@@ -145,14 +140,19 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	//gmp_printf("to encrypt : %Zd\n", x);
 	mpz_powm_sec(c, m, K->e, K->n); // c =m^e mod n
 
-	//mpz_mul(x, x, K->n);
+	size_t temp = mpz_size(c) * sizeof(mp_limb_t); // get real # of files
 
-	size_t len2; //= mpz_size(x)*sizeof(mp_limb_t);
+	size_t len2;
 
 	// gmp_printf("encrypted %Zd\n",x);_
 	Z2BYTES(outBuf, len2, c);
 	//  printf("outbuff length %d\n",(int)strlen(outBuf));
-	//len2 = mpz_size(m)*sizeof(mp_limb_t);
+
+	if (len2 < temp) {
+		for (int i = len2; i <= temp; ++i) {
+			outBuf[i] = 0;
+		}
+	}
 	return len2; /* TODO: return should be # bytes written */
 }
 
@@ -170,18 +170,19 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	//gmp_printf("to decrypt : %Zd\n", m);
 
 	mpz_powm_sec(m, c, K->d, K->n); // m =c^d mod n
+	size_t temp = mpz_size(c) * sizeof(mp_limb_t); // get real # of files
 
-	//mpz_div(m, m, K->n);
-	size_t len2; //= mpz_size(m)*sizeof(mp_limb_t);
+	size_t len2;
 
-	//gmp_printf("decrypted %Zd\n",m);
+	// gmp_printf("encrypted %Zd\n",x);_
 	Z2BYTES(outBuf, len2, m);
-
-	outBuf[len2] = 0; // apparantly need this or wont show correct
-	//len2 = mpz_size(m)*sizeof(mp_limb_t);
-	//mpz_clear(m);
-	//printf("out length %d\n",(int)strlen(outBuf));
-	return len2;
+	//  printf("outbuff length %d\n",(int)strlen(outBuf));
+	if (len2 < temp) {
+		for (int i = len2; i <= temp; ++i) {
+			outBuf[i] = 0;
+		}
+	}
+	return len2; /* TODO: return should be # bytes written */
 
 }
 
