@@ -51,7 +51,7 @@ enum modes {
  * */
 
 #define HASHLEN 32 /* for sha256 */
-#define ENTLEN 512 /* for skey_keyGen */
+#define ENTLEN 512 /* entropy length for skey_keyGen */
 
 int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 {
@@ -112,7 +112,23 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	/* step 2: check decapsulation */
 	/* step 3: derive key from ephemKey and decrypt data. */
 
+	/* step 1: recover the symmetric key */
+	// create inBuf and outBuf
+	size_t inBufLen = rsa_numBytesN(K);
+	unsigned char* inBuf = malloc(inBufLen);
+	unsigned char* outBuf = malloc(inBufLen);
 
+	// open fnIn to read
+	FILE* inFile = fopen(fnIn, "rb");
+	fread(inBuf, 1, inBufLen, inFile);
+	
+	// decrypting fnIn contents with rsa_decrypt
+	rsa_decrypt(outBuf, inBuf, inBufLen, K);
+
+	// retireve SK from outBuf
+	SKE_KEY SK;
+	memcpy (&SK, outBuf, sizeof(SK));
+	
 	
 	return 0;
 }
