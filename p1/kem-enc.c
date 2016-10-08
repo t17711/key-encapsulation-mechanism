@@ -98,7 +98,7 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	
 
 	// 2- Encrypt fnIn with SymmetricKey (SK)
-	size_t offset_out = len + HASHLEN;
+	size_t offset_out = outBufLen + HASHLEN;
 	ske_encrypt_file(fnOut, fnIn, &SK, NULL, offset_out);
 	
 	// RETURN 1 if encryption successful else RETURN 0
@@ -120,7 +120,7 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	unsigned char* inBuf = malloc(inBufLen);
 	unsigned char* outBuf = malloc(inBufLen);
 
-	// open fnIn to read
+	// open fnIn to read the key encryption
 	FILE* inFile = fopen(fnIn, "rb");
 	fread(inBuf, 1, inBufLen, inFile);
 	
@@ -133,10 +133,27 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	memcpy(&SK, outBuf, ENTLEN); 
 	
 	/* step 2: check decapsulation */
-	
-	
-	
-	return 0;
+	fread(inBuf, 1, HASHLEN, inFile);
+	unsigned char* d = &SK;
+	SHA256(d, sizeof(SK), outBuf);
+	if (inBuf != outBuf) {
+		printf("encapsulation != decapsulation");
+		fclose(inFile);
+		free(inBuf);
+		free(outBuf);		
+	}
+
+	fclose(inFile);
+	free(inBuf);
+	free(outBuf);
+
+	/* step 3: derive key from ephemKey and decrypt data. */
+	// ske_decrypt_file of fnIn
+	size_t offset_in = inBufLen + HASHLEN;
+	ske_decrypt_file(fnOut, fnIn, &SK, offset_in);
+
+
+	return 1;
 }
 
 int main(int argc, char *argv[]) {
