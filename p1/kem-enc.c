@@ -78,8 +78,23 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	size_t len = rsa_numBytesN(K);
 	unsigned char* outBuf = malloc(len);	
 	
+	// RSA encryption of SK
 	rsa_encrypt(outBuf, inBuf, sizeof(ske_key), K);
-
+	
+	// open output file to write ciphertext from rsa_encrypt
+	FILE* output_file = fopen(fnOut, "wb");
+	fwrite(outBuf, 1, len, output_file);
+	
+	
+	// calculate SHA256
+	SHA256(inBuf, sizeof(ske_key), outBuf);
+	// write SHA256 of SK to output file
+	fwrite(outBuf, 1, HASHLEN, output_file);
+	
+	// close output file
+	fclose(output_file);
+	// free output buffer
+	free(outBuf);
 
 
 	return 0;
