@@ -61,7 +61,6 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	//encapsulate the key
 	//call the rsa encrypty function
 
-	// 1- Encrypt fnIn with SymmetricKey (SK)
 	// creating symmetric key.
 	SKE_KEY ske_key;
 	
@@ -70,7 +69,7 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	// generating SK with entropy:512	
 	ske_keyGen(&skey_key, entropy, 512);
 
-	// 2- Encapsulate the above created SK with RSA encryption and SHA256
+	// 1- Encapsulate the above created SK with RSA encryption and SHA256
 	//create inBuf
 	unsigned char* inBuf = 	&ske_key;
 	
@@ -95,7 +94,11 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	fclose(output_file);
 	// free output buffer
 	free(outBuf);
+	
 
+	// 2- Encrypt fnIn with SymmetricKey (SK)
+	size_t offset_out = len + HASHLEN;
+	ske_encrypt_file(fnOut, fnIn, &skeKey, NULL, offset_out);
 
 	return 0;
 }
