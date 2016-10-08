@@ -51,6 +51,7 @@ enum modes {
  * */
 
 #define HASHLEN 32 /* for sha256 */
+#define ENTLEN 512 /* for skey_keyGen */
 
 int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 {
@@ -62,23 +63,22 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	//call the rsa encrypty function
 
 	// creating symmetric key.
-	SKE_KEY ske_key;
-	
-	unsigned char entropy[512];
-	randBytes (entropy, 512);
-	// generating SK with entropy:512	
-	ske_keyGen(&skey_key, entropy, 512);
+	unsigned char* x = malloc(ENTLEN);
+	randBytes(x, ENTLEN);
+	SKE_KEY SK;
+	// generating SK with entlen:512	
+	ske_keyGen(&SK, x, ENTLEN);
 
 	// 1- Encapsulate the above created SK with RSA encryption and SHA256
 	//create inBuf
-	unsigned char* inBuf = 	&ske_key;
+	unsigned char* inBuf = 	&SK;
 	
 	// create outBuf
 	size_t len = rsa_numBytesN(K);
 	unsigned char* outBuf = malloc(len);	
 	
 	// RSA encryption of SK
-	rsa_encrypt(outBuf, inBuf, sizeof(ske_key), K);
+	rsa_encrypt(outBuf, inBuf, sizeof(SK), K);
 	
 	// open output file to write ciphertext from rsa_encrypt
 	FILE* output_file = fopen(fnOut, "wb");
@@ -86,7 +86,7 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	
 	
 	// calculate SHA256
-	SHA256(inBuf, sizeof(ske_key), outBuf);
+	SHA256(inBuf, sizeof(SK), outBuf);
 	// write SHA256 of SK to output file
 	fwrite(outBuf, 1, HASHLEN, output_file);
 	
@@ -98,9 +98,10 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 
 	// 2- Encrypt fnIn with SymmetricKey (SK)
 	size_t offset_out = len + HASHLEN;
-	ske_encrypt_file(fnOut, fnIn, &skeKey, NULL, offset_out);
-
-	return 0;
+	ske_encrypt_file(fnOut, fnIn, &SK, NULL, offset_out);
+	
+	// RETURN 1 if encryption successful else RETURN 0
+	return 1;
 }
 
 /* NOTE: make sure you check the decapsulation is valid before continuing */
@@ -110,6 +111,9 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	/* step 1: recover the symmetric key */
 	/* step 2: check decapsulation */
 	/* step 3: derive key from ephemKey and decrypt data. */
+
+
+	
 	return 0;
 }
 
