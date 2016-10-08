@@ -75,7 +75,8 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	
 	// create outBuf
 	size_t len = rsa_numBytesN(K);
-	unsigned char* outBuf = malloc(len);	
+	size_t outBufLen = (len > HASHLEN)? len: HASHLEN;
+	unsigned char* outBuf = malloc(outBufLen);	
 	
 	// RSA encryption of SK
 	rsa_encrypt(outBuf, inBuf, sizeof(SK), K);
@@ -114,7 +115,8 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 
 	/* step 1: recover the symmetric key */
 	// create inBuf and outBuf
-	size_t inBufLen = rsa_numBytesN(K);
+	size_t len = rsa_numBytesN(K);
+	size_t inBufLen = (len > HASHLEN)? len: HASHLEN;
 	unsigned char* inBuf = malloc(inBufLen);
 	unsigned char* outBuf = malloc(inBufLen);
 
@@ -123,11 +125,15 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	fread(inBuf, 1, inBufLen, inFile);
 	
 	// decrypting fnIn contents with rsa_decrypt
-	rsa_decrypt(outBuf, inBuf, inBufLen, K);
+	rsa_decrypt(outBuf, inBuf, inBuflen, K)
+	
 
 	// retireve SK from outBuf
 	SKE_KEY SK;
-	memcpy (&SK, outBuf, sizeof(SK));
+	memcpy(&SK, outBuf, ENTLEN); 
+	
+	/* step 2: check decapsulation */
+	
 	
 	
 	return 0;
