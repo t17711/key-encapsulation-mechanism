@@ -57,6 +57,31 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	/* TODO: encapsulate random symmetric key (SK) using RSA and SHA256;
 	 * encrypt fnIn with SK; concatenate encapsulation and cihpertext;
 	 * write to fnOut. */
+
+	//encapsulate the key
+	//call the rsa encrypty function
+
+	// 1- Encrypt fnIn with SymmetricKey (SK)
+	// creating symmetric key.
+	SKE_KEY ske_key;
+	
+	unsigned char entropy[512];
+	randBytes (entropy, 512);
+	// generating SK with entropy:512	
+	ske_keyGen(&skey_key, entropy, 512);
+
+	// 2- Encapsulate the above created SK with RSA encryption and SHA256
+	//create inBuf
+	unsigned char* inBuf = 	&ske_key;
+	
+	// create outBuf
+	size_t len = rsa_numBytesN(K);
+	unsigned char* outBuf = malloc(len);	
+	
+	rsa_encrypt(outBuf, inBuf, sizeof(ske_key), K);
+
+
+
 	return 0;
 }
 
