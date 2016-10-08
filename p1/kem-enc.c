@@ -224,10 +224,26 @@ int main(int argc, char *argv[]) {
 	 * like private keys when you're done with them (see the
 	 * rsa_shredKey function). */
 	switch (mode) {
-		case ENC:
-		case DEC:
-		case GEN:
-		default:
+		case ENC: {
+			RSA_KEY* K ;
+			rsa_readPublic(fnKey, K);
+			kem_encrypt(fnOut, fnIn, RSA_KEY* K);
+			rsa_shredKey(K);
+			}
+		case DEC: {
+			RSA_KEY* K ;
+			rsa_readPublic(fnOut, K);
+			kem_decrypt(fnOut, fnOut, RSA_KEY* K);
+			rsa_shredKey(K);	
+			}
+		case GEN: {
+			RSA_KEY* K;
+			rsa_keyGen(nBits, K);
+			rsa_writePublic(fnOut, K);
+			rsa_writePrivate(fnOut, K);
+			rsa_shredKey(K);
+			}
+	default:
 			return 1;
 	}
 
