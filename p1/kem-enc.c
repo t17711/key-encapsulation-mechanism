@@ -223,29 +223,38 @@ int main(int argc, char *argv[]) {
 	/* TODO: finish this off.  Be sure to erase sensitive data
 	 * like private keys when you're done with them (see the
 	 * rsa_shredKey function). */
+
 	switch (mode) {
 		case ENC: {
 			RSA_KEY* K ;
-			rsa_readPublic(fnKey, K);
-			kem_encrypt(fnOut, fnIn, RSA_KEY* K);
+			FILE* keyFile = fopen(fnKey, "rb");
+			rsa_readPublic(keyFile, K);
+			kem_encrypt(fnOut, fnIn, K);
 			rsa_shredKey(K);
+			break;
 			}
 		case DEC: {
 			RSA_KEY* K ;
-			rsa_readPublic(fnOut, K);
-			kem_decrypt(fnOut, fnOut, RSA_KEY* K);
-			rsa_shredKey(K);	
+			FILE* keyFile = fopen(fnKey, "rb");
+			rsa_readPublic(keyFile, K);
+			kem_decrypt(fnOut, fnIn, K);
+			rsa_shredKey(K);
+			break;	
 			}
 		case GEN: {
 			RSA_KEY* K;
+			FILE* keyFile = fopen(fnKey, "wb");
 			rsa_keyGen(nBits, K);
 			rsa_writePublic(fnOut, K);
-			rsa_writePrivate(fnOut, K);
+			rsa_writePrivate(keyFile, K);
 			rsa_shredKey(K);
+			break;
 			}
 	default:
 			return 1;
 	}
+
+	fclose(keyFile);
 
 	return 0;
 }
