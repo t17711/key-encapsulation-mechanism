@@ -156,28 +156,45 @@ size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	/* now decrypt.  NOTE: in counter mode, encryption and decryption are
 	 * actually identical, so doing the above again would work. */
 	printf("Decrypting...\n");
-	size_t i;
-	//for (i = 0; i < 32; i++) key[i] = i;
-	unsigned char iv[16];
+	if (len < AES_BLOCK_SIZE + HM_LEN)
+        	return -1;
 
-	for (i = 0; i < 16; i++) {
-		iv[i] = i;
-	}
-	outBuf = malloc(len);
-	//printf("Iv    %d\n", iv);
-	int nWritten = 0;
-	EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-	//if (1!=EVP_DecryptInit_ex(ctx,EVP_aes_256_ctr(),0,key,iv))
-	if (1!=EVP_DecryptInit_ex(ctx,EVP_aes_256_ctr(),0,K->aesKey,iv))
-		ERR_print_errors_fp(stderr);
-	if (1!=EVP_DecryptUpdate(ctx,outBuf,&nWritten,inBuf,len))
-		ERR_print_errors_fp(stderr);
+    // Eliminating the length of HMAC and keeping only encrypted iv + message length
+    	len -= HM_LEN;
 
-	fprintf(stderr, "%s\n",outBuf);
+    // Getting HMAC of encrypted iv+message
 
-	fprintf(stderr, "\n");
-	EVP_CIPHER_CTX_free(ctx);
-	free(outBuf);
+    unsigned char HmacValue[HM_LEN];
+    HMAC(EVP_sha256(), K->hmacKey, HM_LEN, inBuf, len, HmacValue, NULL);
+
+    // Comparing the generated hmac with the hmac of inBuf
+    //if Hmac calculated and the one obtained with inBuf are same perform decryption
+    if (memcmp(HmacValue, inBuf + len, HM_LEN) == 0) 
+        {
+
+    // HMAC test passed, decrypting. iv in the begin of the inBuf
+
+		int nWritten = 0;
+		EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+
+		if (1!=EVP_DecryptInit (ctx,EVP_aes_256_ctr(),K->aesKey, inBuf))
+			ERR_print_errors_fp(stderr);
+		//moving the pointer to the ciphered message location skipping the iv
+	    	inBuf += AES_BLOCK_SIZE;
+	    	len   -= AES_BLOCK_SIZE; //only need the len of ciphered message
+		//len   -= HM_LEN;
+
+		if (1!=EVP_DecryptUpdate(ctx,outBuf,&nWritten,inBuf,len))
+			ERR_print_errors_fp(stderr);
+
+
+	    return len; // return number of bytes written
+
+    }else {
+
+		return -1;
+    }
+
 /////////
 	//nWritten = 0;
 	//ctx = EVP_CIPHER_CTX_new();
