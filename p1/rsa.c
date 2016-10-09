@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "rsa.h"
 #include "prf.h"
 
@@ -57,11 +59,9 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 	 * pieces of the key ({en,de}crypting exponents, and n=pq). */
 	keyBits /= CHAR_BIT;  // need bytes instead of bit
 	unsigned char* buf = malloc(keyBits);  // prf randBytes needs this
-
+	
 	int prime_or_not = 0;
 
-	// set the value for K->p
-	gmp_printf("start keygen \n");
 	while (1) {
 		randBytes(buf, keyBits); // generates random byte string
 
@@ -75,18 +75,24 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 		}
 	}
 
+	 
+	// set the value for K->p
+	gmp_printf("start keygen \n");
 	// set the random value for K->q
 
-	while (1) {
-		randBytes(buf, keyBits); // generates random byte string
-		BYTES2Z(K->q, buf, keyBits); // copy bits to mpz variable
-		//	mpz_nextprime(K->q, K->q);
-		prime_or_not = ISPRIME(K->q); // sheck prime
-		if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
-			printf("prime found for q\n");
-			break;
-		}
-	}
+
+	  while (1) {
+	    randBytes(buf, keyBits); // generates random byte string
+	    BYTES2Z(K->q, buf, keyBits); // copy bits to mpz variable
+	    //	mpz_nextprime(K->q, K->q);
+	    prime_or_not = ISPRIME(K->q); // sheck prime
+	    if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
+	      printf("prime found for q\n");
+	      break;
+	    }
+	  }
+
+
 
 	mpz_mul(K->n, K->p, K->q); // n = p*q
 
@@ -148,11 +154,8 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	Z2BYTES(outBuf, len2, c);
 	//  printf("outbuff length %d\n",(int)strlen(outBuf));
 
-	if (len2 < temp) {
-		for (int i = len2; i <= temp; ++i) {
-			outBuf[i] = 0;
-		}
-	}
+	memset(outBuf+len2,0,temp-len2);// set extra space in buffer as 0
+
 	return len2; /* TODO: return should be # bytes written */
 }
 
@@ -177,11 +180,8 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	// gmp_printf("encrypted %Zd\n",x);_
 	Z2BYTES(outBuf, len2, m);
 	//  printf("outbuff length %d\n",(int)strlen(outBuf));
-	if (len2 < temp) {
-		for (int i = len2; i <= temp; ++i) {
-			outBuf[i] = 0;
-		}
-	}
+
+	memset(outBuf+len2,0,temp-len2);// set extra position in buffer as 0
 	return len2; /* TODO: return should be # bytes written */
 
 }
