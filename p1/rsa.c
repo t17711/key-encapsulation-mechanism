@@ -33,16 +33,20 @@ int zToFile(FILE* f, mpz_t x) {
 }
 int zFromFile(FILE* f, mpz_t x) {
 	size_t i, len = 0;
+	printf("file z\n");
 	/* force little endian-ness: */
 	for (i = 0; i < 8; i++) {
 		unsigned char b;
 		/* XXX error check this; return meaningful value. */
-		fread(&b, 1, 1, f);
+		 fread(&b, 1, 1, f);
+		
 		len += (b << 8 * i);
 	}
 	unsigned char* buf = malloc(len);
 	fread(buf, 1, len, f);
+	printf("to file 2\n");
 	BYTES2Z(x, buf, len);
+
 	/* kill copy in buffer, in case this was sensitive: */
 	memset(buf, 0, len);
 	free(buf);
@@ -161,24 +165,25 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		RSA_KEY* K) {
 	/* TODO: write this.  See remarks above. */
-
-	//printf("Start decrypt\n");
+	gmp_printf("mod : %Zd\n", K->n);
+	printf("Start decrypt\n");
 	NEWZ(c);  // to hold data
 	NEWZ(m);
-	free(outBuf);
-	// printf("In buff size  %d\n",(int)len);
+	//free(outBuf);
+	printf("In buff size  %d\n",(int)len);
 	BYTES2Z(c, inBuf, len);
 
-	//gmp_printf("to decrypt : %Zd\n", m);
+	gmp_printf("to decrypt : %Zd\n", c);
 
 	mpz_powm_sec(m, c, K->d, K->n); // m =c^d mod n
+	gmp_printf("power mod : %Zd\n", m);
 	size_t temp = mpz_size(c) * sizeof(mp_limb_t); // get real # of files
 
 	size_t len2;
 
 	// gmp_printf("encrypted %Zd\n",x);_
 	Z2BYTES(outBuf, len2, m);
-	//  printf("outbuff length %d\n",(int)strlen(outBuf));
+	printf("outbuff length %d\n",(int)strlen(outBuf));
 
 	memset(outBuf+len2,0,temp-len2);// set extra position in buffer as 0
 	return len2; /* TODO: return should be # bytes written */
@@ -210,26 +215,26 @@ int rsa_writePublic(FILE* f, RSA_KEY* K) {
 	return 0;
 }
 int rsa_writePrivate(FILE* f, RSA_KEY* K) {
-	zToFile(f, K->n);
-	zToFile(f, K->e);
-	zToFile(f, K->p);
-	zToFile(f, K->q);
-	zToFile(f, K->d);
+	zToFile(f, K->n);gmp_printf("k->n : %Zd\n", K->n);
+	zToFile(f, K->e);gmp_printf("k->e : %Zd\n", K->e);
+	zToFile(f, K->p);gmp_printf("k->p : %Zd\n", K->p);
+	zToFile(f, K->q);gmp_printf("k->q : %Zd\n", K->q);
+	zToFile(f, K->d);gmp_printf("k->d : %Zd\n", K->d);
 	return 0;
 }
 int rsa_readPublic(FILE* f, RSA_KEY* K) {
 	rsa_initKey(K); /* will set all unused members to 0 */
-	zFromFile(f, K->n);
-	zFromFile(f, K->e);
+	zFromFile(f, K->n);gmp_printf("k->n : %Zd\n", K->n);
+	zFromFile(f, K->e);gmp_printf("k->e : %Zd\n", K->e);
 	return 0;
 }
 int rsa_readPrivate(FILE* f, RSA_KEY* K) {
 	rsa_initKey(K);
-	zFromFile(f, K->n);
-	zFromFile(f, K->e);
-	zFromFile(f, K->p);
-	zFromFile(f, K->q);
-	zFromFile(f, K->d);
+	zFromFile(f, K->n);gmp_printf("k->n : %Zd\n", K->n);
+	zFromFile(f, K->e);gmp_printf("k->e : %Zd\n", K->e);
+	zFromFile(f, K->p);gmp_printf("k->p : %Zd\n", K->p);
+	zFromFile(f, K->q);gmp_printf("k->q : %Zd\n", K->q);
+	zFromFile(f, K->d);gmp_printf("k->c : %Zd\n", K->d);
 	return 0;
 }
 int rsa_shredKey(RSA_KEY* K) {
