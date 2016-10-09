@@ -44,11 +44,6 @@ int ske_keyGen(SKE_KEY* K, unsigned char* entropy, size_t entLen)
 
 		HMAC(EVP_sha256(),KDF_KEY, HM_LEN,entropy, entLen,K->aesKey,NULL);
 		HMAC(EVP_sha256(),KDF_KEY,HM_LEN,entropy, entLen,K->hmacKey,NULL);
-		//printf("Inside if aes--  %s\n , hmac--  %s\n", K->aesKey, K->hmacKey); 
-		//printf("else\n");
-		//printf("aes-- %s, hmackey--  %s",K->aesKey, K->hmacKey);
-		//HMAC(EVP_sha512(),K->aesKey ,HM_LEN,(unsigned char*)mpz_limbs_read(rcount),
-				//sizeof(mp_limb_t)*mpz_size(rcount),outBuf,NULL);
 
 		//printf("aes--  %s , hmac--  %s", K->aesKey, K->hmacKey); 
 	}
@@ -57,43 +52,27 @@ int ske_keyGen(SKE_KEY* K, unsigned char* entropy, size_t entLen)
 
 			randBytes(K->aesKey, HM_LEN);
 			randBytes(K->hmacKey, HM_LEN);
-	printf("aes--  %s\n , hmac--  %s\n", K->aesKey, K->hmacKey); 
+	//printf("aes--  %s\n , hmac--  %s\n", K->aesKey, K->hmacKey); 
 		
 	}
 
-		//printf("aes--  %s , hmac--  %s", K->aesKey, K->hmacKey); 
-	return 0;
+//	return 0;
 }
 size_t ske_getOutputLen(size_t inputLen)
 {
 //printf("block size %i,  inputlne  %lu  and Hmlen   %i\n", AES_BLOCK_SIZE, inputLen, HM_LEN); 
-	printf("getting output len...\n");
+	//printf("getting output len...\n");
 	return AES_BLOCK_SIZE + inputLen + HM_LEN;
 }
 size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		SKE_KEY* K, unsigned char* IV)
 {
-	printf("Encrypting...\n");
-//printf("aesKey   %s,  and Hmac key   %s\n", K->aesKey, K->hmacKey);
-//printf("len  %lu\n", len);
-//printf("outbuf   %s,     inbuf   %s   and IV   %s\n", outBuf, inBuf, IV);
 	/* TODO: finish writing this.  Look at ctr_example() in aes-example.c
 	 * for a hint.  Also, be sure to setup a random IV if none was given.
 	 * You can assume outBuf has enough space for the result. */
 	 /* TODO: should return number of bytes written, which
 	             hopefully matches ske_getOutputLen(...). */
 
-	//unsigned char key[32];
-	//unsigned char key = K->aesKey;
-	//printf("key is %c", key);
-	
-	//unsigned char ct[512];
-	//unsigned char pt[512];
-	/* so you can see which bytes were written: */
-	/*memset(ct,0,512);
-	memset(pt,0,512);
-	char* message = inBuf;
-	size_t Len = strlen(message);*/
 	unsigned char* temp_iv;
 
 	unsigned char iv_arr[HM_LEN];
@@ -126,23 +105,42 @@ size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
     	HMAC (EVP_sha256(), K->hmacKey, HM_LEN, outBuf, hmac, outBuf + hmac, NULL);
 	
     return ske_getOutputLen (len);
-
-//printf("outbuf   %s,     inbuf   %s   and IV  %d  and ctLen %lu\n", outBuf, inBuf, IV, ctLen);
-//printf("Iv    %d\n", IV);
-/*
-ske_encrypt 
-outBuf is a pointer to unsigned char and holds output
-inBuf is a the plain text, len is the length of the text, K is the symmetric key to encrypt the inbuf and Iv is the initialized vector 
-algo
-how do I encrypt the input plain text
-use K 
-*/
 }
 size_t ske_encrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, unsigned char* IV, size_t offset_out)
 {
 	/* TODO: write this.  Hint: mmap. */
+	int fd = -1;
+    char *inputfile;
+	struct stat fv;
 
+    if ((fd = open(fnin, O_RDONLY, 0)) == -1){        
+    	perror("open");
+		return 1;
+	}	
+	if(fstat(fd, &fv) == -1){
+		perror("fstat");
+		return 1;
+	}
+	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
+	if(inputfile == MAP_FAILED){
+		perror("mmap");
+		return 1;
+	}
+	close(fd);
+	unsigned char* fileout;
+	size_t len =strlen(inputfile)+1;
+	size_t ctLen = ske_getOutputLen(len); 
+	fileout= malloc(ctLen);
+	size_t ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
+	FILE * o_file = fopen(fnout, "rb+");
+	fseek(o_file, offset_out, SEEK_SET);
+	fwrite(fileout, sizeof(char), ctLen2, o_file);
+	
+	free(inputfile);
+	free(fileout);
+	fclose(o_file);
+			
 			
 	return 0;
 }
@@ -196,21 +194,43 @@ size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		return -1;
     }
 
-/////////
-	//nWritten = 0;
-	//ctx = EVP_CIPHER_CTX_new();
-	//if (1!=EVP_DecryptInit_ex(ctx,EVP_aes_256_ctr(),0,key,iv))
-	//	ERR_print_errors_fp(stderr);
-	//if (1!=EVP_DecryptUpdate(ctx,pt,&nWritten,ct,ctLen))
-	//	ERR_print_errors_fp(stderr);
-	//fprintf(stderr, "%s\n",pt);
-////////
-	return 0;
 }
 size_t ske_decrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, size_t offset_in)
 {
 	/* TODO: write this. */
+	int fd = -1;
+        char *inputfile;
+	struct stat fv;
+
+        if ((fd = open(fnin, O_RDONLY, 0)) == -1)
+        {        perror("open");
+		return 1;
+	}	
+	if(fstat(fd, &fv) == -1){
+		perror("fstat");
+		return 1;
+	}
+	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
+	if(inputfile == MAP_FAILED){
+		perror("mmap");
+		return 1;
+	}
+	close(fd);
+	unsigned char* fileout = NULL;
+	size_t len =strlen(inputfile)+1;
+
+
+	size_t ctLen = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
+	fileout= malloc(ctLen);
+
+	FILE * o_file = fopen(fnout, "rb+");
+	fseek(o_file, offset_in, SEEK_SET);
+	fwrite(fileout, sizeof(char), ctLen, o_file);
+	
+	free(inputfile);
+	free(fileout);
+	fclose(o_file);
 
 
 	return 0;
