@@ -71,13 +71,12 @@ size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	 * You can assume outBuf has enough space for the result. */
 	 /* TODO: should return number of bytes written, which
 	             hopefully matches ske_getOutputLen(...). */
-
+	printf("inske enc\n");
 	unsigned char* temp_iv;
 
 	unsigned char iv_arr[HM_LEN];
 
 	if(IV==NULL){
-
 		randBytes(iv_arr, HM_LEN);	
 		temp_iv = iv_arr;
 	
@@ -109,6 +108,7 @@ size_t ske_encrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, unsigned char* IV, size_t offset_out)
 {
 	/* TODO: write this.  Hint: mmap. */
+	printf("inske file\n");
 	int fd = -1;
     char *inputfile;
 	struct stat fv;
@@ -131,17 +131,26 @@ size_t ske_encrypt_file(const char* fnout, const char* fnin,
 	size_t len =strlen(inputfile)+1;
 	size_t ctLen = ske_getOutputLen(len); 
 	fileout= malloc(ctLen);
+
 	size_t ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
-	FILE * o_file = fopen(fnout, "rb+");
-	fseek(o_file, offset_out, SEEK_SET);
-	fwrite(fileout, sizeof(char), ctLen2, o_file);
+
+	printf("encrypt worked\n");
 	
-	free(inputfile);
-	free(fileout);
-	fclose(o_file);
-			
-			
-	return 0;
+	
+	if ((fd = open(fnout, O_CREAT|O_RDWR|O_TRUNC, 0)) == -1){        
+	perror("open");
+		return 1;
+	}	
+	if(fstat(fd, &fv) == -1){
+		perror("fstat");
+		return 1;
+	}
+
+	if (write(fd, fileout, ctLen2)<0 ) {
+	perror("open"); return 1;
+	}
+					
+	return fv.st_size;
 }
 size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		SKE_KEY* K)
