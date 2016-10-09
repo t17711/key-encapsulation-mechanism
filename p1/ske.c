@@ -155,12 +155,14 @@ size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	 * for how to do basic decryption. */
 	/* now decrypt.  NOTE: in counter mode, encryption and decryption are
 	 * actually identical, so doing the above again would work. */
-	printf("Decrypting...\n");
+
+
+	//printf("Decrypting...\n");
 	if (len < AES_BLOCK_SIZE + HM_LEN)
         	return -1;
 
     // Eliminating the length of HMAC and keeping only encrypted iv + message length
-    	len -= HM_LEN;
+    len -= HM_LEN;
 
     // Getting HMAC of encrypted iv+message
 
@@ -169,8 +171,7 @@ size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 
     // Comparing the generated hmac with the hmac of inBuf
     //if Hmac calculated and the one obtained with inBuf are same perform decryption
-    if (memcmp(HmacValue, inBuf + len, HM_LEN) == 0) 
-        {
+    if (memcmp(HmacValue, inBuf + len, HM_LEN) == 0) {
 
     // HMAC test passed, decrypting. iv in the begin of the inBuf
 
