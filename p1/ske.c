@@ -94,24 +94,38 @@ size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	memset(pt,0,512);
 	char* message = inBuf;
 	size_t Len = strlen(message);*/
-	size_t i;
-	//outBuf = malloc(len);
+	unsigned char* temp_iv;
+
+	unsigned char iv_arr[HM_LEN];
+
+	if(IV==NULL){
+
+		randBytes(iv_arr, HM_LEN);	
+		temp_iv = iv_arr;
+	
+	}else{
+		temp_iv = IV;
+	}
+	memcpy (outBuf, temp_iv, AES_BLOCK_SIZE);//copies IV to outBuf upto AES_BLOCK_SIZE bytes
+
+
 	/* encrypt: */
 	EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-	//if (1!=EVP_EncryptInit_ex(ctx,EVP_aes_256_ctr(),0,key,iv))
-	if (1!=EVP_EncryptInit_ex(ctx,EVP_aes_256_ctr(),0,K->aesKey,IV))
+
+	if (1!=EVP_EncryptInit_ex(ctx,EVP_aes_256_ctr(),0,K->aesKey,temp_iv))
 		ERR_print_errors_fp(stderr);
 	int nWritten;
-	//if (1!=EVP_EncryptUpdate(ctx,ct,&nWritten,(unsigned char*)message,Len))
-	if (1!=EVP_EncryptUpdate(ctx,outBuf,&nWritten,inBuf,len))
+	//append inBuf after IV and encrypt it the len is now AES_BLOCK_SIZE + len
+	if (1!=EVP_EncryptUpdate(ctx, outBuf+AES_BLOCK_SIZE, &nWritten, inBuf, len))
 		ERR_print_errors_fp(stderr);
 	EVP_CIPHER_CTX_free(ctx);
-	size_t ctLen = nWritten;
-	for (i = 0; i < ctLen; i++) {
-		fprintf(stderr, "%02x",outBuf[i]);
-	}
-	fprintf(stderr, "\n");
-	//free(outBuf);
+	
+	size_t hmac = len + AES_BLOCK_SIZE;
+
+	//hash encrypted message which is hmac length long and put it on position starting from outBuf+hmac of outBuf
+    	HMAC (EVP_sha256(), K->hmacKey, HM_LEN, outBuf, hmac, outBuf + hmac, NULL);
+	
+    return ske_getOutputLen (len);
 
 //printf("outbuf   %s,     inbuf   %s   and IV  %d  and ctLen %lu\n", outBuf, inBuf, IV, ctLen);
 //printf("Iv    %d\n", IV);
@@ -123,12 +137,13 @@ algo
 how do I encrypt the input plain text
 use K 
 */
-return 0;
 }
 size_t ske_encrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, unsigned char* IV, size_t offset_out)
 {
 	/* TODO: write this.  Hint: mmap. */
+
+			
 	return 0;
 }
 size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
