@@ -125,7 +125,7 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	fread(inBuf, 1, inBufLen, inFile);
 	
 	// decrypting fnIn contents with rsa_decrypt
-	rsa_decrypt(outBuf, inBuf, inBuflen, K)
+	rsa_decrypt(outBuf, inBuf, inBufLen, K);
 	
 
 	// retireve SK from outBuf
@@ -223,11 +223,11 @@ int main(int argc, char *argv[]) {
 	/* TODO: finish this off.  Be sure to erase sensitive data
 	 * like private keys when you're done with them (see the
 	 * rsa_shredKey function). */
-
+	FILE* keyFile;
 	switch (mode) {
 		case ENC: {
 			RSA_KEY* K ;
-			FILE* keyFile = fopen(fnKey, "rb");
+			keyFile = fopen(fnKey, "rb");
 			rsa_readPublic(keyFile, K);
 			kem_encrypt(fnOut, fnIn, K);
 			rsa_shredKey(K);
