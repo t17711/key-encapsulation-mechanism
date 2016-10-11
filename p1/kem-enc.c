@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 	memset(fnIn,0,FNLEN+1);
 	memset(fnOut,0,FNLEN+1);
 	memset(fnKey,0,FNLEN+1);
-	int mode = ENC;
+	int mode = -1;
 	// size_t nBits = 2048;
 	size_t nBits = 1024;
 	while ((c = getopt_long(argc, argv, "edhi:o:k:r:g:b:", long_opts, &opt_index)) != -1) {
@@ -314,7 +314,8 @@ int main(int argc, char *argv[]) {
 			break;
 			}
 	default:
-			return 1;
+	  printf("%s", usage);
+	  return 1;
 	}
 
 	
