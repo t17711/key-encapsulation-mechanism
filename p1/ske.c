@@ -109,39 +109,40 @@ size_t ske_encrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, unsigned char* IV, size_t offset_out)
 {
 	/* TODO: write this.  Hint: mmap. */
-	int fd = -1;
-    char *inputfile;
-	struct stat fv;
+char *inputfile;
+  unsigned char* fileout;
 
-    if ((fd = open(fnin, O_RDONLY, 0)) == -1){        
-    	perror("open");
-		return 1;
-	}	
-	if(fstat(fd, &fv) == -1){
-		perror("fstat");
-		return 1;
-	}
-	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
-	if(inputfile == MAP_FAILED){
-		perror("mmap");
-		return 1;
-	}
-	close(fd);
-	unsigned char* fileout;
-	size_t len =strlen(inputfile)+1;
-	size_t ctLen = ske_getOutputLen(len); 
-	fileout= malloc(ctLen);
-	size_t ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
-	FILE * o_file = fopen(fnout, "rb+");
-	fseek(o_file, offset_out, SEEK_SET);
-	fwrite(fileout, sizeof(char), ctLen2, o_file);
+  FILE * inFile = fopen(fnin, "rb");
+  FILE *outFile = fopen(fnout, "rw+b"); // update file
+
+  if (offset_out != 0) fseek(outFile, offset_out, SEEK_SET);
+
+  size_t BLOCK_LEN = 2048;
+  inputfile = malloc(BLOCK_LEN);
+  fileout = malloc(BLOCK_LEN);
+  size_t len= 0,ctLen2=0, outLen=0;
+  while(!feof(inFile))
+    {
+      memset(inputfile, 0, BLOCK_LEN);
+      memset(fileout,0,BLOCK_LEN);
+      len  = fread(inputfile, 1, BLOCK_LEN, inFile);
+      	printf("%s", inputfile);
+	ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
+	//	printf("%s", fileout);
+	//	printf("encrypt worked\n");
 	
-	free(inputfile);
-	free(fileout);
-	fclose(o_file);
-			
-			
-	return 0;
+	len = fwrite(fileout, 1, ctLen2, outFile);
+	outLen+=len;
+    }
+
+ 
+  free(inputfile);
+  free(fileout);
+  
+  fclose(inFile);
+  fclose(outFile);
+  
+  return outLen;	
 }
 size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		SKE_KEY* K)
@@ -198,39 +199,40 @@ size_t ske_decrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, size_t offset_in)
 {
 	/* TODO: write this. */
-	int fd = -1;
-        char *inputfile;
-	struct stat fv;
-
-        if ((fd = open(fnin, O_RDONLY, 0)) == -1)
-        {        perror("open");
-		return 1;
-	}	
-	if(fstat(fd, &fv) == -1){
-		perror("fstat");
-		return 1;
-	}
-	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
-	if(inputfile == MAP_FAILED){
-		perror("mmap");
-		return 1;
-	}
-	close(fd);
-	unsigned char* fileout = NULL;
-	size_t len =strlen(inputfile)+1;
+  char *inputfile;
+  unsigned char* fileout;
 
 
-	size_t ctLen = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
-	fileout= malloc(ctLen);
+  FILE * inFile = fopen(fnin, "rb");
 
-	FILE * o_file = fopen(fnout, "rb+");
-	fseek(o_file, offset_in, SEEK_SET);
-	fwrite(fileout, sizeof(char), ctLen, o_file);
+  FILE *outFile = fopen(fnout, "wb"); // update file
+
+  if (offset_in != 0) fseek(inFile, offset_in, SEEK_SET);
+
+  size_t BLOCK_LEN = 2048;
+  inputfile = malloc(BLOCK_LEN);
+  fileout = malloc(BLOCK_LEN);
+  size_t len= 0,ctLen2=0, outLen=0;
+  while(!feof(inFile))
+    {
+	len = 0;
+	memset(fileout, 0 , BLOCK_LEN);
+	memset(inputfile, 0, BLOCK_LEN);
 	
-	free(inputfile);
-	free(fileout);
-	fclose(o_file);
+	len  = fread(inputfile, 1, BLOCK_LEN, inFile);
+	
+	ctLen2 = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
+	printf("%s", fileout);
+	//	printf("encrypt worked\n");
+	
+	len = fwrite(fileout, 1, ctLen2, outFile);
+	outLen+=len;
+    }
 
-
-	return 0;
+  free(inputfile);
+  
+  free(fileout);
+  fclose(inFile);
+  fclose(outFile);
+  return outLen;
 }
