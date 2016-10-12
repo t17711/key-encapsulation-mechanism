@@ -27,7 +27,6 @@
  * */
 
 /* we'll use hmac with sha256, which produces 32 byte output */
-#define BYTES2Z(x,buf,len) mpz_import(x,len,-1,1,0,0,buf)
 #define HM_LEN 32
 #define KDF_KEY "qVHqkOVJLb7EolR9dsAMVwH1hRCYVx#I"
 /* need to make sure KDF is orthogonal to other hash functions, like
