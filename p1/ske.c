@@ -113,22 +113,24 @@ size_t ske_encrypt_file(const char* fnout, const char* fnin,
   unsigned char* fileout;
 
   FILE * inFile = fopen(fnin, "rb");
-  FILE *outFile = fopen(fnout, "rw+b"); // update file
+  FILE *outFile = fopen(fnout, "r+b"); // update file
 
   if (offset_out != 0) fseek(outFile, offset_out, SEEK_SET);
 
   size_t BLOCK_LEN = 2048;
   inputfile = malloc(BLOCK_LEN);
-  fileout = malloc(BLOCK_LEN);
+
+  size_t t  = ske_getOutputLen(BLOCK_LEN);
+  fileout = malloc(t);
   size_t len= 0,ctLen2=0, outLen=0;
   while(!feof(inFile))
     {
-      memset(inputfile, 0, BLOCK_LEN);
-      memset(fileout,0,BLOCK_LEN);
+          memset(inputfile, 0, BLOCK_LEN);
+        memset(fileout,0,t);
       len  = fread(inputfile, 1, BLOCK_LEN, inFile);
-      	printf("%s", inputfile);
+      // 	printf("%s", inputfile);
 	ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
-	//	printf("%s", fileout);
+	//	printf("\n%d\n", ctLen2);
 	//	printf("encrypt worked\n");
 	
 	len = fwrite(fileout, 1, ctLen2, outFile);
@@ -209,19 +211,22 @@ size_t ske_decrypt_file(const char* fnout, const char* fnin,
   if (offset_in != 0) fseek(inFile, offset_in, SEEK_SET);
 
   size_t BLOCK_LEN = 2048;
-  inputfile = malloc(BLOCK_LEN);
   fileout = malloc(BLOCK_LEN);
+  
+  size_t t = ske_getOutputLen(BLOCK_LEN);
+  inputfile = malloc(t);
+
   size_t len= 0,ctLen2=0, outLen=0;
   while(!feof(inFile))
     {
 	len = 0;
 	memset(fileout, 0 , BLOCK_LEN);
-	memset(inputfile, 0, BLOCK_LEN);
+	memset(inputfile, 0,t);
 	
-	len  = fread(inputfile, 1, BLOCK_LEN, inFile);
+	len  = fread(inputfile, 1, t, inFile);
 	
 	ctLen2 = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
-	printf("%s", fileout);
+	//	printf("%s\n  %d", fileout, ctLen2);
 	//	printf("encrypt worked\n");
 	
 	len = fwrite(fileout, 1, ctLen2, outFile);
