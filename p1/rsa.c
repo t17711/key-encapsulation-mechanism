@@ -65,11 +65,13 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
 	
   int prime_or_not = 0;
 
+  // get random p
   while (1) {
     randBytes(buf, keyBits); // generates random byte string
 
+    // rand char to int
     BYTES2Z(K->p, buf, keyBits);
-    //mpz_nextprime(K->p, K->p);
+  
     prime_or_not = ISPRIME(K->p); // sheck prime
 
     if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
@@ -78,17 +80,16 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
     }
   }
 
-	 
-  // set the value for K->p
-  //gmp_printf("start keygen \n");
+
   // set the random value for K->q
-
-
   while (1) {
+
     randBytes(buf, keyBits); // generates random byte string
+
     BYTES2Z(K->q, buf, keyBits); // copy bits to mpz variable
-    //	mpz_nextprime(K->q, K->q);
+    
     prime_or_not = ISPRIME(K->q); // sheck prime
+
     if (prime_or_not > 0) { // if 2 prime if 1 probably or the other way around, but good enough for us
       //printf("prime found for q\n");
       break;
@@ -96,7 +97,7 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
   }
 
 
-
+  // get n
   mpz_mul(K->n, K->p, K->q); // n = p*q
 
   // find e
@@ -104,10 +105,10 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
   // phi(n) = (p-1)(q - 1)
   mpz_sub_ui(K->q, K->q, 1);
   mpz_sub_ui(K->p, K->p, 1);
-  // dont need p q anymore
+
   mpz_mul(K->d, K->p, K->q);
 
-	
+  // reset pa and q	
   mpz_add_ui(K->q, K->q, 1);
   mpz_add_ui(K->p, K->p, 1);
 
@@ -117,6 +118,7 @@ int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
   // currently i have K->d as phi after i find real e i set K->e to that and calculate d to det to K->d
   while (1) {
     if (mpz_gcd_ui(0, K->d, k) == 1) {
+
       // gmp_printf("Encryption key e found %Zd\n", K->e);
       mpz_set_ui(K->e, k);
       break; // if e found return
@@ -140,19 +142,21 @@ size_t rsa_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 
   //printf("Start encrypt\n");
   // printf("In length %d\n",(int)len);
-  NEWZ(m); // to hold date
-  NEWZ(c);
-  BYTES2Z(m, inBuf, len);
+  NEWZ(m); // to hold message
+  NEWZ(c); // to hold cypher text
+
+  BYTES2Z(m, inBuf, len); // get integer from message
   
   // gmp_printf("message is : %Zd\n",m);
+
   mpz_powm_sec(c, m, K->e, K->n); // c =m^e mod n
  //gmp_printf("ct is : %Zd\n, n is %Zd, e is %Zd\n", c, K->n, K->e);
+
   size_t len2;
 
   //  gmp_printf("encrypted %Zd\n",c);
   Z2BYTES(outBuf, len2, c);
 
-  
   return len2; /* TODO: return should be # bytes written */
 }
 
@@ -161,10 +165,10 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
   /* TODO: write this.  See remarks above. */
   // gmp_printf("mod : %Zd\n", K->n);
 
-  NEWZ(c);  // to hold data
-  NEWZ(m);
+  NEWZ(c);  // to hold cypher text
+  NEWZ(m); // message 
 
-  BYTES2Z(c, inBuf, len);
+  BYTES2Z(c, inBuf, len); // read integer from cypher text
 
   // gmp_printf("to decrypt : %Zd\n",c);
 
@@ -173,8 +177,7 @@ size_t rsa_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
   size_t len2;
   
   //  gmp_printf("decrypted  %Zd\n",m);
-  Z2BYTES(outBuf, len2, m);
-
+  Z2BYTES(outBuf, len2, m); // this sets  num bytes written to len2
   
   return len2; /* TODO: return should be # bytes written */
 
