@@ -29,6 +29,7 @@
 /* we'll use hmac with sha256, which produces 32 byte output */
 #define BYTES2Z(x,buf,len) mpz_import(x,len,-1,1,0,0,buf)
 #define HM_LEN 32
+#define FILE_BLOCk 2048
 #define KDF_KEY "qVHqkOVJLb7EolR9dsAMVwH1hRCYVx#I"
 /* need to make sure KDF is orthogonal to other hash functions, like
  * the one used in the KDF, so we use hmac with a key. */
@@ -71,7 +72,7 @@ size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 	 * You can assume outBuf has enough space for the result. */
 	 /* TODO: should return number of bytes written, which
 	             hopefully matches ske_getOutputLen(...). */
-	printf("inske enc\n");
+  //	printf("inske enc\n");
 	unsigned char* temp_iv;
 
 	unsigned char iv_arr[HM_LEN];
@@ -106,51 +107,49 @@ size_t ske_encrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 }
 size_t ske_encrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, unsigned char* IV, size_t offset_out)
-{
-	/* TODO: write this.  Hint: mmap. */
-	printf("inske file\n");
-	int fd = -1;
-    char *inputfile;
-	struct stat fv;
+{/* TODO: write this.  Hint: mmap. */
+  //	printf("inske file\n");
 
-    if ((fd = open(fnin, O_RDONLY, 0)) == -1){        
-    	perror("open");
-		return 1;
-	}	
-	if(fstat(fd, &fv) == -1){
-		perror("fstat");
-		return 1;
-	}
-	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
-	if(inputfile == MAP_FAILED){
-		perror("mmap");
-		return 1;
-	}
-	close(fd);
-	unsigned char* fileout;
-	size_t len =strlen(inputfile)+1;
-	size_t ctLen = ske_getOutputLen(len); 
-	fileout= malloc(ctLen);
+  char *inputfile;
+  unsigned char* fileout;
 
-	size_t ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV);
+  FILE * inFile = fopen(fnin, "rb");
+  FILE *outFile = fopen(fnout, "r+b"); // update file
 
-	printf("encrypt worked\n");
+  if (offset_out != 0) fseek(outFile, offset_out, SEEK_SET); // we write file starting from offset_out
+
+ // just some length of string
+  inputfile = malloc(FILE_BLOCk); 
+
+  size_t t  = ske_getOutputLen(FILE_BLOCk);
+
+  // this should be able t hold encrypted
+  fileout = malloc(t);
+
+  size_t len= 0,ctLen2=0, outLen=0;
+  while(!feof(inFile)) // read one block at a time to make easier, it gave error otherwise 
+    {
+      memset(inputfile, 0, FILE_BLOCk); // reset values each loop
+      memset(fileout,0,t);
+      len  = fread(inputfile, 1, FILE_BLOCk, inFile); // read inputfile
+      // 	printf("%s", inputfile);
+      ctLen2 = ske_encrypt(fileout, (unsigned char*) inputfile, len, K,  IV); // this returns number of bytes returned it is same as t
+	//	printf("\n%d\n", ctLen2);
+	//	printf("encrypt worked\n");
 	
-	
-	if ((fd = open(fnout, O_CREAT|O_RDWR|O_TRUNC, 0)) == -1){        
-	perror("open");
-		return 1;
-	}	
-	if(fstat(fd, &fv) == -1){
-		perror("fstat");
-		return 1;
-	}
+      len = fwrite(fileout, 1, ctLen2, outFile); // write to file, len is same as t
 
-	if (write(fd, fileout, ctLen2)<0 ) {
-	perror("open"); return 1;
-	}
-					
-	return fv.st_size;
+	outLen+=len;
+    }
+
+ 
+  free(inputfile);
+  free(fileout);
+  
+  fclose(inFile);
+  fclose(outFile);
+  
+  return outLen;					
 }
 size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 		SKE_KEY* K)
@@ -206,40 +205,45 @@ size_t ske_decrypt(unsigned char* outBuf, unsigned char* inBuf, size_t len,
 size_t ske_decrypt_file(const char* fnout, const char* fnin,
 		SKE_KEY* K, size_t offset_in)
 {
-	/* TODO: write this. */
-	int fd = -1;
-        char *inputfile;
-	struct stat fv;
-
-        if ((fd = open(fnin, O_RDONLY, 0)) == -1)
-        {        perror("open");
-		return 1;
-	}	
-	if(fstat(fd, &fv) == -1){
-		perror("fstat");
-		return 1;
-	}
-	inputfile = (char*)mmap(NULL, fv.st_size , PROT_READ, MAP_SHARED, fd, 0);
-	if(inputfile == MAP_FAILED){
-		perror("mmap");
-		return 1;
-	}
-	close(fd);
-	unsigned char* fileout = NULL;
-	size_t len =strlen(inputfile)+1;
+  char *inputfile;
+  unsigned char* fileout;
 
 
-	size_t ctLen = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
-	fileout= malloc(ctLen);
+  FILE * inFile = fopen(fnin, "rb");
 
-	FILE * o_file = fopen(fnout, "rb+");
-	fseek(o_file, offset_in, SEEK_SET);
-	fwrite(fileout, sizeof(char), ctLen, o_file);
+  FILE *outFile = fopen(fnout, "wb"); // update file
+
+  // start reading input file from offset_in
+  if (offset_in != 0) fseek(inFile, offset_in, SEEK_SET);
+
+ fileout = malloc(FILE_BLOCk);
+  
+  size_t t = ske_getOutputLen(FILE_BLOCk);
+  inputfile = malloc(t); // input file is list of ske encrypted blocks of size 2048, so we read each encrypted block size at once
+  // also last block is not of the t size but it is still ske encrypted block
+  size_t len= 0,ctLen2=0, outLen=0;
+  while(!feof(inFile))
+    {
+	len = 0;
+	memset(fileout, 0 , FILE_BLOCk); // reset values
+	memset(inputfile, 0,t);
 	
-	free(inputfile);
-	free(fileout);
-	fclose(o_file);
+	len  = fread(inputfile, 1, t, inFile); // read encrypted block  to decrypt
 
+	// decrypt the block
+	ctLen2 = ske_decrypt(fileout, (unsigned char*) inputfile, len, K);
+	//	printf("%s\n  %d", fileout, ctLen2);
+	//	printf("encrypt worked\n");
 
-	return 0;
+	// write decrypted to file
+	len = fwrite(fileout, 1, ctLen2, outFile);
+	outLen+=len;
+    }
+
+  free(inputfile);
+  
+  free(fileout);
+  fclose(inFile);
+  fclose(outFile);
+  return outLen;
 }
