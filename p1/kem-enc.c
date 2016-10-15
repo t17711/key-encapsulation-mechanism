@@ -63,25 +63,19 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	 * encrypt fnIn with SK; concatenate encapsulation and cihpertext;
 	 * write to fnOut. */
 
-	//encapsulate the key
-	//call the rsa encrypty function
-
-	// creating symmetric key.
+	// 1- creating symmetric key.
 	size_t len = rsa_numBytesN(K);
 	unsigned char* x = malloc(len);
-	//randBytes(x, len);
 	SKE_KEY SK;
 	// generating SK 	
 	ske_keyGen(&SK, x, len);
 
-	// 1- Encapsulate the above created SK with RSA encryption and SHA256
-	
-	
+
+	// 2- Encapsulate the above created SK with RSA encryption and SHA256
 	// create outBuf
 	size_t outBufLen = len +  HASHLEN;
 	unsigned char* outBuf = malloc(len);
 	FILE* output_file = fopen(fnOut, "w");
-	
 	
 	// RSA encryption of SK
 	memset(outBuf,0,len);
@@ -94,38 +88,38 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	}
 	
 	// open output file to write ciphertext from rsa_encrypt
-
 	fwrite(outBuf, sizeof(unsigned char), rsa_encryption, output_file);
 	
 	
-	// calculate SHA256
-
+	// 3- calculate SHA256
 	//create SHABuf
 	unsigned char* shaBuf = malloc(HASHLEN);
 	SHA256((unsigned char *) &SK, sizeof(SKE_KEY), shaBuf);
 
 	// write SHA256 of SK to output file
 	size_t kemFile = fwrite(shaBuf, sizeof(unsigned char), HASHLEN, output_file);
-
+	
+	// checking if KEM Encryption is same as HASHLEN
 	if (HASHLEN != kemFile) {
 		printf("KEM Encryption unsuccessfull as failed to write\n");
 		return -1;
 	}
 	
+	
 	// close output file
 	fclose(output_file);
-	// free output buffer
+	// free buffers
 	free(outBuf);
 	free(shaBuf);
 	
 
-	// 2- Encrypt fnIn with SymmetricKey (SK)
-	// what is char IV??
+	// 4- Encrypt fnIn with SymmetricKey (SK)
 	size_t outputEncryption = ske_encrypt_file(fnOut, fnIn, &SK, NULL, outBufLen);
 	
 	// RETURN 1 if encryption successful else RETURN 0
 	return (outputEncryption == -1)? 0:1;
 }
+
 
 /* NOTE: make sure you check the decapsulation is valid before continuing */
 int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
@@ -153,12 +147,9 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	if (sz != len) {printf("fread file  error\n"); exit (3);}
 	
 	// decrypting fnIn contents with rsa_decrypt
-	//memset(rsaBuf, 0,skeLen);
-
 	memset(rsaBuf,0,len);
-        rsa_decrypt(rsaBuf, rsaBuf1, len, K);	    
+    rsa_decrypt(rsaBuf, rsaBuf1, len, K);	    
 
-	
 	// retireve SK from outBuf
 	SKE_KEY SK;
 	memcpy(&SK, rsaBuf, skeLen);
@@ -166,9 +157,8 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	// retrive hash
 	fread(shaBuf,1,HASHLEN,inFile);
 	
+	
 	/* step 2: check decapsulation */
-	//	size_t tem = fread(inBuf, 1, HASHLEN, inFile);
-
 	unsigned char * tempBufHash = malloc(HASHLEN);
 	SHA256(	(unsigned char*) &SK, skeLen, tempBufHash);
 	
@@ -177,17 +167,16 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	    return 1;
 	  }
 	
-
 	fclose(inFile);
 	free(rsaBuf);
 	free(shaBuf);
 	free(wholeBuf);
+	
 
 	/* step 3: derive key from ephemKey and decrypt data. */
 	// ske_decrypt_file of fnIn
 	size_t offset_in = len + HASHLEN;
 	ske_decrypt_file(fnOut, fnIn, &SK, offset_in);
-
 
 	return 1;
 }
@@ -263,7 +252,6 @@ int main(int argc, char *argv[]) {
 	switch (mode) {
 		case ENC: {
 			RSA_KEY K ;
-			//	rsa_initKey(&K);
 			FILE* keyFile = fopen(fnKey, "rb");
 			rsa_readPublic(keyFile, &K);
 			fclose(keyFile);
@@ -275,8 +263,7 @@ int main(int argc, char *argv[]) {
 			}
 		case DEC: {
 
-			RSA_KEY K ;
-			//rsa_initKey(&K);
+			RSA_KEY K ;;
 			FILE* keyFile = fopen(fnKey, "rb");
 
 			rsa_readPrivate(keyFile, &K);
