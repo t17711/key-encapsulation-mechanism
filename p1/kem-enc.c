@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
 			}
 		case DEC: {
 
-			RSA_KEY K ;;
+			RSA_KEY K ;
 			FILE* keyFile = fopen(fnKey, "rb");
 
 			rsa_readPrivate(keyFile, &K);
