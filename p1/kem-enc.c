@@ -3,6 +3,7 @@
  * based on the KEM/DEM hybrid model. */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
@@ -83,7 +84,7 @@ int kem_encrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	
 	// checking if rsaencryption is same as the rsalength
 	if (rsa_encryption != len) {
-		printf("RSA Encryption failed! Expected size: %u \n  Output size: %u\n", outBufLen, rsa_encryption);
+		printf("RSA Encryption failed! Expected size: %u \n  Output size: %u\n", len, rsa_encryption);
 	}
 	//memcpy(outBuf, tempBuf, len);
 	//for (int i =0; i<len; i++) {
@@ -214,7 +215,7 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 
 	// retireve SK from outBuf
 	SKE_KEY SK;
-	memcpy(&SK, outBuf, len); 
+	ske_keyGen(&SK, outBuf, len); 
 	
 	
 	/* step 2: check decapsulation */
@@ -229,14 +230,14 @@ int kem_decrypt(const char* fnOut, const char* fnIn, RSA_KEY* K)
 	}
 
 	fclose(inFile);
-	free(inBuf);
-	free(outBuf);
+	
 
 	/* step 3: derive key from ephemKey and decrypt data. */
 	// ske_decrypt_file of fnIn
 	
 	size_t skeDecryption = ske_decrypt_file(fnOut, fnIn, &SK, inBufLen);
-
+	free(inBuf);
+	free(outBuf);
 
 	return (skeDecryption == -1)? 0: 1;
 }
@@ -312,7 +313,7 @@ int main(int argc, char *argv[]) {
 	switch (mode) {
 		case ENC: {
 			RSA_KEY K ;
-			rsa_initKey(&K);
+			//rsa_initKey(&K);
 			FILE* keyFile = fopen(fnKey, "rb");
 			rsa_readPublic(keyFile, &K);
 			fclose(keyFile);
@@ -323,32 +324,34 @@ int main(int argc, char *argv[]) {
 		case DEC: {
 
 			RSA_KEY K ;
-			rsa_initKey(&K);
+			//rsa_initKey(&K);
 			FILE* keyFile = fopen(fnKey, "rb");
-
 			rsa_readPrivate(keyFile, &K);
 			printf("Start dec\n");
 			fclose(keyFile);
 
 			kem_decrypt(fnOut, fnIn, &K);
-			//rsa_shredKey(K);
+			rsa_shredKey(&K);
 			break;	
 			}
 		case GEN: {
 			RSA_KEY K;
-			FILE* private = fopen(fnOut, "wb");
-			rsa_keyGen(nBits, &K);
-			rsa_writePrivate(private, &K);
-
+			FILE* private = fopen(fnOut, "w");
+			
+			
+			
 			char *pubExtension = ".pub";
 			char *publicKeyFile = malloc(strlen(fnOut)+4+1);
 			strcpy(publicKeyFile, fnOut);
 			strcat(publicKeyFile, pubExtension);
 			//printf("did concat\n");
+			
+			FILE* public = fopen(publicKeyFile, "w");
 
-			FILE* public = fopen(publicKeyFile, "wb");			
+			rsa_keyGen(nBits, &K);
+			
 			rsa_writePublic(public, &K);
-
+			rsa_writePrivate(private, &K);
 			fclose(private);
 			fclose(public);
 			//rsa_shredKey(K);

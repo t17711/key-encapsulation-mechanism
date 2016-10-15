@@ -34,12 +34,11 @@ int zToFile(FILE* f, mpz_t x) {
 int zFromFile(FILE* f, mpz_t x) {
 	size_t i, len = 0;
 	printf("file z\n");
-	/* force little endian-ness: */
+	// force little endian-ness: //
 	for (i = 0; i < 8; i++) {
 		unsigned char b;
-		/* XXX error check this; return meaningful value. */
-		 fread(&b, 1, 1, f);
-		
+		// XXX error check this; return meaningful value. //
+		fread(&b, 1, 1, f);
 		len += (b << 8 * i);
 	}
 	unsigned char* buf = malloc(len);
@@ -47,10 +46,11 @@ int zFromFile(FILE* f, mpz_t x) {
 	printf("to file 2\n");
 	BYTES2Z(x, buf, len);
 
-	/* kill copy in buffer, in case this was sensitive: */
+	// kill copy in buffer, in case this was sensitive: //
 	memset(buf, 0, len);
 	free(buf);
 	return 0;
+
 }
 
 int rsa_keyGen(size_t keyBits, RSA_KEY* K) {
@@ -210,16 +210,16 @@ int rsa_initKey(RSA_KEY* K) {
 
 int rsa_writePublic(FILE* f, RSA_KEY* K) {
 	/* only write n,e */
-	zToFile(f, K->n);
-	zToFile(f, K->e);
+	zToFile(f, K->n); gmp_printf("k->n : %Zd\n", K->n);
+	zToFile(f, K->e); gmp_printf("k->e : %Zd\n", K->e);
 	return 0;
 }
 int rsa_writePrivate(FILE* f, RSA_KEY* K) {
-	zToFile(f, K->n);gmp_printf("k->n : %Zd\n", K->n);
-	zToFile(f, K->e);gmp_printf("k->e : %Zd\n", K->e);
-	zToFile(f, K->p);gmp_printf("k->p : %Zd\n", K->p);
-	zToFile(f, K->q);gmp_printf("k->q : %Zd\n", K->q);
-	zToFile(f, K->d);gmp_printf("k->d : %Zd\n", K->d);
+	zToFile(f, K->n); gmp_printf("k->n : %Zd\n", K->n);
+	zToFile(f, K->e); gmp_printf("k->e : %Zd\n", K->e);
+	zToFile(f, K->p); gmp_printf("k->p : %Zd\n", K->p);
+	zToFile(f, K->q); gmp_printf("k->q : %Zd\n", K->q);
+	zToFile(f, K->d); gmp_printf("k->d : %Zd\n", K->d);
 	return 0;
 }
 int rsa_readPublic(FILE* f, RSA_KEY* K) {
